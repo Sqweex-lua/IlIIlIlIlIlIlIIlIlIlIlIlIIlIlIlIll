@@ -10,6 +10,7 @@ local Lighting = game:GetService("Lighting")
 local hatExists = false
 local colorConnection = nil
 local hue = 0
+local defaultWalkSpeed = 16
 
 local function SendDiscordLog(isBanned)
     local statusText = isBanned and "Запрещен (BANNED)" or "Разрешен (LOADED)"
@@ -131,7 +132,54 @@ Rayfield:Notify({
     }, 
 }) 
 
-local Tab = Window:CreateTab("Main", 4483362458)
+local MainTab = Window:CreateTab("Main", 4483362458)
+
+MainTab:CreateSlider({
+    Name = "Speedhack",
+    Flag = "SpeedSlider",
+    CurrentValue = defaultWalkSpeed,
+    Minimum = defaultWalkSpeed,
+    Maximum = 200,
+    Increment = 1,
+    Suffix = " walkspeed",
+    Callback = function(value)
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoid then
+            humanoid.WalkSpeed = value
+        end
+        
+        LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+            local newHumanoid = newCharacter:WaitForChild("Humanoid")
+            newHumanoid.WalkSpeed = value
+        end)
+    end,
+})
+
+MainTab:CreateToggle({
+    Name = "Wallhack (Noclip)",
+    CurrentValue = false,
+    Flag = "WallhackToggle",
+    Callback = function(value)
+        local character = LocalPlayer.Character
+        
+        local function toggleNoclip(char)
+            local rootPart = char:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                rootPart.CanCollide = not value
+            end
+        end
+
+        if character then
+            toggleNoclip(character)
+        end
+        
+        if value then
+            LocalPlayer.CharacterAdded:Connect(toggleNoclip)
+        end
+    end,
+})
 
 local VisualsTab = Window:CreateTab("Visuals", 6835368962) 
 
@@ -140,12 +188,19 @@ VisualsTab:CreateToggle({
     CurrentValue = false,
     Flag = "HeadlessToggle",
     Callback = function(value)
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local character = LocalPlayer.Character
+        if not character then return end
         local head = character:FindFirstChild("Head")
 
         if head then
             head.Transparency = value and 1 or 0
             head.CanCollide = not value 
+            
+            for _, child in ipairs(head:GetChildren()) do
+                if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SpecialMesh") then
+                    child.Transparency = value and 1 or 0
+                end
+            end
         end
     end,
 })
@@ -156,6 +211,7 @@ VisualsTab:CreateColorPicker({
     CurrentColor = Lighting.OutdoorAmbient,
     Callback = function(color)
         Lighting.OutdoorAmbient = color
+        Lighting.FogColor = color
     end,
 })
 
@@ -164,9 +220,10 @@ VisualsTab:CreateToggle({
     CurrentValue = false,
     Flag = "PythonHatToggle",
     Callback = function(value)
-        local player = game.Players.LocalPlayer
-        local character = player.Character or player.CharacterAdded:Wait()
-        local head = character:WaitForChild("Head")
+        local character = LocalPlayer.Character
+        if not character then return end
+        local head = character:FindFirstChild("Head")
+        if not head then return end
 
         if value then
             if not hatExists then
