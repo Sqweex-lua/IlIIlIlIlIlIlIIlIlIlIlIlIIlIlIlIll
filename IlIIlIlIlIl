@@ -1,4 +1,4 @@
-local WEBHOOK_URL = 'ВАШ_DISCORD_WEBHOOK_URL' 
+local WEBHOOK_URL = 'https://discord.com/api/webhooks/1389813904581984298/n3GVYdYkKIspJzqxvUXjFZjzyku0GxK-lIiYAIbu9SWl8Il5Nzzfr-y7SBDCXkVi_ImQ' 
 local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.ban' 
 
 local Players = game:GetService("Players")
