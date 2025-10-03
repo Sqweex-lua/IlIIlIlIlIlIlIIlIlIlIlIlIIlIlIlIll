@@ -1,116 +1,125 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local WEBHOOK_URL = 'ВАШ_DISCORD_WEBHOOK_URL' 
+local BANLIST_URL = 'ВАШ_ПРЯМОЙ_URL_К_СПИСКУ_БАНОВ' 
 
-local Window = Rayfield:CreateWindow({
-    Name = "dark.cc",
-    LoadingTitle = "dark.cc",
-    LoadingSubtitle = "Loading. . .",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "darkconfig",
-        FileName = "config"
-    },
-    KeySystem = true,
-    KeySettings = {
-        Title = "dark.cc",
-        Subtitle = "Key System",
-        Note = "Wanna key? buy private - t.me/iceglock66",
-        FileName = "darkcc",
-        SaveKey = true,
-        GrabKeyFromSite = true,
-        Key = {"obtfree"}
-    }
-})
-
-Rayfield:Notify({
-    Title = "dark.cc",
-    Content = "Loaded! ",
-    Duration = 6.5,
-    Image = 4483362458,
-    Actions = {
-        Ignore = {
-            Name = "OK",
-            Callback = function()
-                print("t.me/darkcheatcc")
-            end
-        },
-    },
-})
-
-local Tab = Window:CreateTab("Main", 4483362458)
-
-local isEspEnabled = false
-local espObjects = {}
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local CoreGui = game:GetService("CoreGui") -- Получаем CoreGui для надежной отрисовки
+local PlayerName = LocalPlayer.Name
+local PlayerId = tostring(LocalPlayer.UserId)
 
-local espColor = Color3.new(1, 0, 0)
+local function SendDiscordLog(isBanned)
+    local statusText = isBanned and "(BANNED)" or "(LOADED)"
+    local color = isBanned and 16711680 or 65280
 
-local function ClearEsp()
-    for _, object in pairs(espObjects) do
-        if object.Box and object.Box.Parent then
-            object.Box:Destroy()
-        end
-        if object.Text and object.Text.Parent then
-            object.Text:Destroy()
-        end
-    end
-    espObjects = {}
+    local data = {
+        ["embeds"] = {{
+            ["title"] = " dark.cc | Запуск скрипта ",
+            ["description"] = "Попытка загрузки скрипта зафиксирована.",
+            ["color"] = color,
+            ["fields"] = {
+                {
+                    ["name"] = "Никнейм",
+                    ["value"] = string.format("`%s`", PlayerName),
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "ID Пользователя",
+                    ["value"] = string.format("`%s`", PlayerId),
+                    ["inline"] = true
+                },
+                {
+                    ["name"] = "Статус (is_banned)",
+                    ["value"] = string.format("`%s`", tostring(isBanned)),
+                    ["inline"] = false
+                },
+                {
+                    ["name"] = "Результат загрузки",
+                    ["value"] = string.format("**%s**", statusText),
+                    ["inline"] = false
+                }
+            },
+            ["footer"] = {
+                ["text"] = "dark.cc Logger"
+            },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z")
+        }}
+    }
+
+    local jsonData = game:GetService("HttpService"):JSONEncode(data)
+    game:HttpGetAsync({
+        Url = WEBHOOK_URL,
+        Headers = {["Content-Type"] = "application/json"},
+        Method = "POST",
+        Body = jsonData
+    })
 end
 
-local function UpdateEsp()
-    if not isEspEnabled then 
-        ClearEsp()
-        return 
-    end
+local function CheckBanStatus()
+    local success, content = pcall(function()
+        return game:HttpGet(BANLIST_URL)
+    end)
 
-    ClearEsp() 
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
-            local head = player.Character.Head
-            local screenPosition, visible = workspace.CurrentCamera:WorldToScreenPoint(head.Position)
-
-            if visible then
-                local espText = Instance.new("TextLabel")
-                espText.Text = player.Name
-                espText.Position = UDim2.new(0, screenPosition.X, 0, screenPosition.Y)
-                espText.Size = UDim2.new(0, 100, 0, 20)
-                espText.BackgroundTransparency = 1
-                espText.TextColor3 = espColor
-                
-                -- ИСПРАВЛЕНИЕ: Используем CoreGui для повышения совместимости
-                espText.Parent = CoreGui 
-
-                table.insert(espObjects, {Text = espText})
+    if success and content then
+        local banList = {}
+        for id in content:gmatch("([^\r\n]+)") do
+            if string.match(id:gsub("%s", ""), "^" .. PlayerId .. "$") then
+                return true
             end
         end
     end
+    return false 
 end
 
-RunService.RenderStepped:Connect(function()
-    if isEspEnabled then
-        UpdateEsp()
-    else
-        ClearEsp()
-    end
-end)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-Tab:CreateColorPicker({
-    Name = "ESP Color",
-    Color = Color3.new(1, 0, 0),
-    Callback = function(Color)
-        espColor = Color
-    end,
-})
+local isUserBanned = CheckBanStatus() 
 
-Tab:CreateToggle({
-    Name = "Player ESP",
-    Callback = function(Value)
-        isEspEnabled = Value
-        if not Value then
-            ClearEsp()
-        end
-    end,
-})
+if isUserBanned then
+    SendDiscordLog(true) 
+    Rayfield:Notify({ 
+        Title = "dark.cc", 
+        Content = "Ваш аккаунт заблокирован! Обратитесь к t.me/iceglock66", 
+        Duration = 10,
+        Image = 4483362458
+    })
+    return
+else
+    SendDiscordLog(false) 
+end
+
+local Window = Rayfield:CreateWindow({ 
+    Name = "dark.cc", 
+    LoadingTitle = "dark.cc", 
+    LoadingSubtitle = "Loading. . .", 
+    ConfigurationSaving = { 
+        Enabled = true, 
+        FolderName = "darkconfig", 
+        FileName = "config" 
+    }, 
+    KeySystem = true, 
+    KeySettings = { 
+        Title = "dark.cc", 
+        Subtitle = "Key System", 
+        Note = "Wanna key? buy private - t.me/iceglock66", 
+        FileName = "darkcc", 
+        SaveKey = true, 
+        GrabKeyFromSite = true, 
+        Key = {"https://raw.githubusercontent.com/Sqweex-lua/-SS-Waffen-BDSM--.corporation/refs/heads/main/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIl.asm"} 
+    } 
+}) 
+
+Rayfield:Notify({ 
+    Title = "dark.cc", 
+    Content = "Loaded! ", 
+    Duration = 6.5, 
+    Image = 4483362458, 
+    Actions = { 
+        Ignore = { 
+            Name = "OK", 
+            Callback = function() 
+                print("t.me/darkcheatcc") 
+            end 
+        }, 
+    }, 
+}) 
+
+local Tab = Window:CreateTab("Main", 4483362458)
