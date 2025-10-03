@@ -10,7 +10,9 @@ local Lighting = game:GetService("Lighting")
 local hatExists = false
 local colorConnection = nil
 local hue = 0
-local defaultWalkSpeed = 16
+
+-- Храним текущую установленную скорость для TextInput
+local currentWalkSpeed = 16 
 
 local function SendDiscordLog(isBanned)
     local statusText = isBanned and "Запрещен (BANNED)" or "Разрешен (LOADED)"
@@ -117,52 +119,50 @@ local Window = Rayfield:CreateWindow({
     } 
 }) 
 
-Rayfield:Notify({ 
-    Title = "dark.cc", 
-    Content = "Loaded! ", 
-    Duration = 6.5, 
-    Image = 4483362458, 
-    Actions = { 
-        Ignore = { 
-            Name = "OK", 
-            Callback = function() 
-                print("t.me/darkcheatcc") 
-            end 
-        }, 
-    }, 
-}) 
-
 local MainTab = Window:CreateTab("Main", 4483362458)
 
-MainTab:CreateSlider({
-    Name = "Speedhack",
-    Flag = "SpeedSlider",
-    CurrentValue = defaultWalkSpeed,
-    Minimum = defaultWalkSpeed,
-    Maximum = 200,
-    Increment = 1,
-    Suffix = " walkspeed",
+---
+## Main Tab Elements
+---
+
+-- [ ИСПРАВЛЕННЫЙ ЭЛЕМЕНТ: Speedhack (TextInput) ]
+MainTab:CreateInput({
+    Name = "Speedhack (WalkSpeed)",
+    Flag = "SpeedInput",
+    CurrentValue = tostring(currentWalkSpeed),
+    Placeholder = "16 - 200",
+    NumberOnly = true, 
     Callback = function(value)
-        local character = LocalPlayer.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local speed = tonumber(value)
         
-        if humanoid then
-            humanoid.WalkSpeed = value
+        -- Проверка на валидность и диапазон
+        if speed and speed >= 16 and speed <= 200 then
+            currentWalkSpeed = speed
+        else
+            -- Если ввод неверный, возвращаем стандартную скорость
+            currentWalkSpeed = 16 
         end
         
-        LocalPlayer.CharacterAdded:Connect(function(newCharacter)
-            local newHumanoid = newCharacter:WaitForChild("Humanoid")
-            newHumanoid.WalkSpeed = value
-        end)
+        local function applySpeed(char)
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = currentWalkSpeed
+            end
+        end
+
+        applySpeed(LocalPlayer.Character)
+        
+        -- Повторное применение при респавне
+        LocalPlayer.CharacterAdded:Connect(applySpeed)
     end,
 })
 
+-- [ Wallhack (Noclip) ]
 MainTab:CreateToggle({
     Name = "Wallhack (Noclip)",
     CurrentValue = false,
     Flag = "WallhackToggle",
     Callback = function(value)
-        local character = LocalPlayer.Character
         
         local function toggleNoclip(char)
             local rootPart = char:FindFirstChild("HumanoidRootPart")
@@ -171,15 +171,20 @@ MainTab:CreateToggle({
             end
         end
 
-        if character then
-            toggleNoclip(character)
+        if LocalPlayer.Character then
+            toggleNoclip(LocalPlayer.Character)
         end
         
+        -- Повторное применение при респавне
         if value then
             LocalPlayer.CharacterAdded:Connect(toggleNoclip)
         end
     end,
 })
+
+---
+## Visuals Tab Elements
+---
 
 local VisualsTab = Window:CreateTab("Visuals", 6835368962) 
 
@@ -270,4 +275,19 @@ VisualsTab:CreateToggle({
             end
         end
     end,
+})
+
+Rayfield:Notify({ 
+    Title = "dark.cc", 
+    Content = "Loaded! ", 
+    Duration = 6.5, 
+    Image = 4483362458, 
+    Actions = { 
+        Ignore = { 
+            Name = "OK", 
+            Callback = function() 
+                print("t.me/darkcheatcc") 
+            end 
+        }, 
+    }, 
 })
