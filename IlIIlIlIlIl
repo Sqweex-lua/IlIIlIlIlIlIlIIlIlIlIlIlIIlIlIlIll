@@ -1,9 +1,10 @@
 local WEBHOOK_URL = 'https://discord.com/api/webhooks/1389813904581984298/n3GVYdYkKIspJzqxvUXjFZjzyku0GxK-lIiYAIbu9SWl8Il5Nzzfr-y7SBDCXkVi_ImQ' 
-local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.ban' 
+-- !!! ЭТОТ ФАЙЛ ДОЛЖЕН СОДЕРЖАТЬ СПИСОК НИКНЕЙМОВ !!!
+local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.txt' 
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local PlayerName = LocalPlayer.Name
+local PlayerName = LocalPlayer.Name -- Используем никнейм для бана
 local PlayerId = tostring(LocalPlayer.UserId)
 
 local function SendDiscordLog(isBanned)
@@ -46,7 +47,6 @@ local function SendDiscordLog(isBanned)
 
     local jsonData = game:GetService("HttpService"):JSONEncode(data)
     
-    -- ИСПРАВЛЕНИЕ: Используем request() для POST-запроса
     request({
         Url = WEBHOOK_URL,
         Headers = {["Content-Type"] = "application/json"},
@@ -61,9 +61,15 @@ local function CheckBanStatus()
     end)
 
     if success and content then
-        for id in content:gmatch("([^\r\n]+)") do
-            if string.match(id:gsub("%s", ""), "^" .. PlayerId .. "$") then
-                return true
+        -- Проверяем, содержится ли никнейм в списке банов.
+        -- Никнейм не чувствителен к регистру для более надежного бана (например, "admin" == "Admin").
+        local lowerPlayerName = string.lower(PlayerName)
+        
+        for name in content:gmatch("([^\r\n]+)") do
+            local lowerBanName = string.lower(name:gsub("%s", "")) -- Удаляем пробелы
+            
+            if lowerPlayerName == lowerBanName then
+                return true -- Никнейм найден в списке банов
             end
         end
     end
