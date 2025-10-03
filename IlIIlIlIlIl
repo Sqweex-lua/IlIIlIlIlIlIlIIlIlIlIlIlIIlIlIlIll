@@ -1,5 +1,5 @@
 local WEBHOOK_URL = 'ВАШ_DISCORD_WEBHOOK_URL' 
-local BANLIST_URL = 'ВАШ_ПРЯМОЙ_URL_К_СПИСКУ_БАНОВ' 
+local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.ban' 
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
