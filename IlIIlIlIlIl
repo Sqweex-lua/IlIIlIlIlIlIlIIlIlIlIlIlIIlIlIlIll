@@ -1,11 +1,15 @@
 local WEBHOOK_URL = 'https://discord.com/api/webhooks/1389813904581984298/n3GVYdYkKIspJzqxvUXjFZjzyku0GxK-lIiYAIbu9SWl8Il5Nzzfr-y7SBDCXkVi_ImQ' 
--- !!! ЭТОТ ФАЙЛ ДОЛЖЕН СОДЕРЖАТЬ СПИСОК НИКНЕЙМОВ !!!
 local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.txt' 
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local PlayerName = LocalPlayer.Name -- Используем никнейм для бана
+local PlayerName = LocalPlayer.Name 
 local PlayerId = tostring(LocalPlayer.UserId)
+local Lighting = game:GetService("Lighting")
+
+local hatExists = false
+local colorConnection = nil
+local hue = 0
 
 local function SendDiscordLog(isBanned)
     local statusText = isBanned and "Запрещен (BANNED)" or "Разрешен (LOADED)"
@@ -61,15 +65,13 @@ local function CheckBanStatus()
     end)
 
     if success and content then
-        -- Проверяем, содержится ли никнейм в списке банов.
-        -- Никнейм не чувствителен к регистру для более надежного бана (например, "admin" == "Admin").
         local lowerPlayerName = string.lower(PlayerName)
         
         for name in content:gmatch("([^\r\n]+)") do
-            local lowerBanName = string.lower(name:gsub("%s", "")) -- Удаляем пробелы
+            local lowerBanName = string.lower(name:gsub("%s", ""))
             
             if lowerPlayerName == lowerBanName then
-                return true -- Никнейм найден в списке банов
+                return true
             end
         end
     end
@@ -130,3 +132,85 @@ Rayfield:Notify({
 }) 
 
 local Tab = Window:CreateTab("Main", 4483362458)
+
+local VisualsTab = Window:CreateTab("Visuals", 6835368962) 
+
+VisualsTab:CreateToggle({
+    Name = "Headless", 
+    CurrentValue = false,
+    Flag = "HeadlessToggle",
+    Callback = function(value)
+        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local head = character:FindFirstChild("Head")
+
+        if head then
+            head.Transparency = value and 1 or 0
+            head.CanCollide = not value 
+        end
+    end,
+})
+
+VisualsTab:CreateColorPicker({
+    Name = "Sky Color Changer",
+    Flag = "SkyColorPicker",
+    CurrentColor = Lighting.OutdoorAmbient,
+    Callback = function(color)
+        Lighting.OutdoorAmbient = color
+    end,
+})
+
+VisualsTab:CreateToggle({
+    Name = "ChinaHat", 
+    CurrentValue = false,
+    Flag = "PythonHatToggle",
+    Callback = function(value)
+        local player = game.Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local head = character:WaitForChild("Head")
+
+        if value then
+            if not hatExists then
+                local hat = Instance.new("Part")
+                hat.Name = "ClientPython"
+                hat.Anchored = false
+                hat.CanCollide = false
+                hat.Size = Vector3.new(4, 0.3, 4)
+                hat.Shape = Enum.PartType.Block
+                hat.Transparency = 0.4
+                hat.Material = Enum.Material.Neon
+                hat.Parent = head
+
+                local mesh = Instance.new("SpecialMesh", hat)
+                mesh.MeshType = Enum.MeshType.FileMesh
+                mesh.MeshId = "rbxassetid://1033714" 
+                mesh.Scale = Vector3.new(2, 1, 2)
+
+                hat.CFrame = head.CFrame * CFrame.new(0, 1, 0)
+                local weld = Instance.new("WeldConstraint", hat)
+                weld.Part0 = hat
+                weld.Part1 = head
+                
+                colorConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                    hue = (hue + 1) % 360
+                    hat.Color = Color3.fromHSV(hue / 360, 1, 1)
+                end)
+
+                hatExists = true
+            end
+        else
+            if hatExists then
+                if colorConnection then
+                    colorConnection:Disconnect()
+                    colorConnection = nil
+                end
+
+                local existingHat = head:FindFirstChild("ClientPython")
+                if existingHat then
+                    existingHat:Destroy()
+                end
+
+                hatExists = false
+            end
+        end
+    end,
+})
