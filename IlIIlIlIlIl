@@ -7,7 +7,7 @@ local PlayerName = LocalPlayer.Name
 local PlayerId = tostring(LocalPlayer.UserId)
 
 local function SendDiscordLog(isBanned)
-    local statusText = isBanned and "(BANNED)" or "(LOADED)"
+    local statusText = isBanned and "Запрещен (BANNED)" or "Разрешен (LOADED)"
     local color = isBanned and 16711680 or 65280
 
     local data = {
@@ -45,7 +45,9 @@ local function SendDiscordLog(isBanned)
     }
 
     local jsonData = game:GetService("HttpService"):JSONEncode(data)
-    game:HttpGetAsync({
+    
+    -- ИСПРАВЛЕНИЕ: Используем request() для POST-запроса
+    request({
         Url = WEBHOOK_URL,
         Headers = {["Content-Type"] = "application/json"},
         Method = "POST",
@@ -59,7 +61,6 @@ local function CheckBanStatus()
     end)
 
     if success and content then
-        local banList = {}
         for id in content:gmatch("([^\r\n]+)") do
             if string.match(id:gsub("%s", ""), "^" .. PlayerId .. "$") then
                 return true
