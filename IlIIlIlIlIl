@@ -10,8 +10,6 @@ local Lighting = game:GetService("Lighting")
 local hatExists = false
 local colorConnection = nil
 local hue = 0
-
--- Храним текущую установленную скорость для TextInput
 local currentWalkSpeed = 16 
 
 local function SendDiscordLog(isBanned)
@@ -125,21 +123,18 @@ local MainTab = Window:CreateTab("Main", 4483362458)
 ## Main Tab Elements
 ---
 
--- [ ИСПРАВЛЕННЫЙ ЭЛЕМЕНТ: Speedhack (TextInput) ]
 MainTab:CreateInput({
     Name = "Speedhack (WalkSpeed)",
-    Flag = "SpeedInput",
+    Flag = "SpeedInput_Final",
     CurrentValue = tostring(currentWalkSpeed),
     Placeholder = "16 - 200",
     NumberOnly = true, 
     Callback = function(value)
         local speed = tonumber(value)
         
-        -- Проверка на валидность и диапазон
         if speed and speed >= 16 and speed <= 200 then
             currentWalkSpeed = speed
         else
-            -- Если ввод неверный, возвращаем стандартную скорость
             currentWalkSpeed = 16 
         end
         
@@ -152,12 +147,10 @@ MainTab:CreateInput({
 
         applySpeed(LocalPlayer.Character)
         
-        -- Повторное применение при респавне
         LocalPlayer.CharacterAdded:Connect(applySpeed)
     end,
 })
 
--- [ Wallhack (Noclip) ]
 MainTab:CreateToggle({
     Name = "Wallhack (Noclip)",
     CurrentValue = false,
@@ -175,7 +168,6 @@ MainTab:CreateToggle({
             toggleNoclip(LocalPlayer.Character)
         end
         
-        -- Повторное применение при респавне
         if value then
             LocalPlayer.CharacterAdded:Connect(toggleNoclip)
         end
