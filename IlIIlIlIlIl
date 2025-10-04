@@ -184,15 +184,15 @@ local function load_rayfield()
     local Button2 = visuals:CreateButton({
         Name = "Esp",
         Callback = function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universal-Aimbot-v3-56070"))()
+        loadstring(game:HttpGet("https://gist.githubusercontent.com/MezaJITZ/948a8b04460d7dae930062a2670a4ddf/raw/2f0b1d4f0275e10a189ecdd59fefde476bfd573c/gistfile1.txt", true))()
         end,
     })
 
     local Button3 = misc:CreateButton({
         Name = "Legit AimBot",
         Callback = function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universal-Aimbot-v3-56070"))()
-        end,
+        loadstring(game:HttpGet("https://gist.githubusercontent.com/MezaJITZ/948a8b04460d7dae930062a2670a4ddf/raw/2f0b1d4f0275e10a189ecdd59fefde476bfd573c/gistfile1.txt", true))()
+    end,
     })
 end
 
