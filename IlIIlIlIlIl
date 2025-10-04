@@ -1,285 +1,292 @@
-local WEBHOOK_URL = 'https://discord.com/api/webhooks/1389813904581984298/n3GVYdYkKIspJzqxvUXjFZjzyku0GxK-lIiYAIbu9SWl8Il5Nzzfr-y7SBDCXkVi_ImQ' 
-local BANLIST_URL = 'https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.txt' 
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local lplr = game.Players.LocalPlayer
+local http = game:GetService("HttpService")
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerName = LocalPlayer.Name 
-local PlayerId = tostring(LocalPlayer.UserId)
-local Lighting = game:GetService("Lighting")
+-- =================================================================================
+--                              НАСТРОЙКИ (ОБЯЗАТЕЛЬНО ЗАМЕНИТЬ)
+-- =================================================================================
 
-local hatExists = false
-local colorConnection = nil
-local hue = 0
-local currentWalkSpeed = 16 
+-- 1. *** ВАШ DISCORD WEBHOOK URL! ***
+local WebhookURL = "https://discord.com/api/webhooks/1389813904581984298/n3GVYdYkKIspJzqxvUXjFZjzyku0GxK-lIiYAIbu9SWl8Il5Nzzfr-y7SBDCXkVi_ImQ"
 
-local function SendDiscordLog(isBanned)
-    local statusText = isBanned and "Запрещен (BANNED)" or "Разрешен (LOADED)"
-    local color = isBanned and 16711680 or 65280
+-- 2. *** RAW ССЫЛКА С ГИТХАБА (по одному нику на строку) для ЗАБАНЕННЫХ ***
+local BANNED_USERS_RAW_URL = "https://raw.githubusercontent.com/Sqweex-lua/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIll/refs/heads/main/checker.txt" 
 
+-- 3. *** RAW ССЫЛКА С ГИТХАБА (по одному ключу на строку) для ПРОВЕРКИ КЛЮЧЕЙ ***
+local KEYS_RAW_URL = "https://raw.githubusercontent.com/Sqweex-lua/-SS-Waffen-BDSM--.corporation/refs/heads/main/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIl.asm"
+
+
+-- =================================================================================
+--                              ФУНКЦИИ ЛОГИРОВАНИЯ И БАНА
+-- =================================================================================
+
+local function log_to_discord(title, description, color)
+    if WebhookURL == "YOUR_DISCORD_WEBHOOK_URL_HERE" then
+        warn("Discord Webhook URL не настроен. Логирование отключено.")
+        return
+    end
+    
     local data = {
         ["embeds"] = {{
-            ["title"] = " dark.cc | Запуск скрипта ",
-            ["description"] = "Попытка загрузки скрипта зафиксирована.",
-            ["color"] = color,
-            ["fields"] = {
-                {
-                    ["name"] = "Никнейм",
-                    ["value"] = string.format("`%s`", PlayerName),
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "ID Пользователя",
-                    ["value"] = string.format("`%s`", PlayerId),
-                    ["inline"] = true
-                },
-                {
-                    ["name"] = "Статус (is_banned)",
-                    ["value"] = string.format("`%s`", tostring(isBanned)),
-                    ["inline"] = false
-                },
-                {
-                    ["name"] = "Результат загрузки",
-                    ["value"] = string.format("**%s**", statusText),
-                    ["inline"] = false
-                }
-            },
-            ["footer"] = {
-                ["text"] = "dark.cc Logger"
-            },
-            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%S.000Z")
-        }}
+            ["title"] = title,
+            ["description"] = description,
+            ["color"] = tonumber(string.format("0x%x", color), 16) or 0x3498db
+        }},
+        ["username"] = "dark.cc Key Logger"
     }
 
-    local jsonData = game:GetService("HttpService"):JSONEncode(data)
-    
-    request({
-        Url = WEBHOOK_URL,
-        Headers = {["Content-Type"] = "application/json"},
-        Method = "POST",
-        Body = jsonData
-    })
+    local jsonData = http:JSONEncode(data)
+
+    pcall(function()
+        http:PostAsync(WebhookURL, jsonData, Enum.HttpContentType.ApplicationJson)
+    end)
 end
 
-local function CheckBanStatus()
-    local success, content = pcall(function()
-        return game:HttpGet(BANLIST_URL)
+-- Проверяет, забанен ли игрок, скачивая список с GitHub
+local function check_ban_status()
+    if BANNED_USERS_RAW_URL == "YOUR_GITHUB_RAW_URL_HERE" then 
+        warn("BANNED_USERS_RAW_URL не настроен. Проверка бана пропущена.")
+        return false 
+    end
+
+    local success, response = pcall(function()
+        return http:GetAsync(BANNED_USERS_RAW_URL)
     end)
 
-    if success and content then
-        local lowerPlayerName = string.lower(PlayerName)
-        
-        for name in content:gmatch("([^\r\n]+)") do
-            local lowerBanName = string.lower(name:gsub("%s", ""))
-            
-            if lowerPlayerName == lowerBanName then
-                return true
-            end
+    if success and response then
+        local banned_nicks = {}
+        -- Разделяем ответ на строки
+        for nick in string.gmatch(response, "[^\r\n]+") do
+            banned_nicks[string.lower(string.gsub(nick, "%s", ""))] = true
         end
+
+        if banned_nicks[string.lower(lplr.Name)] then
+            log_to_discord(
+                "❌ Доступ Заблокирован (Бан)",
+                "**Ник:** "..lplr.Name.."\n**UserID:** "..lplr.UserId.."\n**Статус:** Забанен",
+                0xFF0000 -- Красный
+            )
+            return true -- Забанен
+        end
+    else
+        warn("Не удалось получить список забаненных пользователей. Проверка бана пропущена.")
     end
-    return false 
+    
+    return false -- Не забанен
 end
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- Функция, которая выполняется после проверки ключа Rayfield
+local function KeyCallback(key_validity, input_key)
+    local status = key_validity and "✅ Успешная загрузка" or "🔑 Неправильный ключ"
+    local color = key_validity and 0x00FF00 or 0xFFA500 -- Зеленый или Оранжевый
 
-local isUserBanned = CheckBanStatus() 
+    -- Логирование в Discord
+    log_to_discord(
+        status,
+        "**Ник:** "..lplr.Name.."\n**UserID:** "..lplr.UserId.."\n**Введенный ключ:** `"..input_key.."`\n**Статус загрузки:** "..tostring(key_validity),
+        color
+    )
+    
+    return key_validity
+end
 
-if isUserBanned then
-    SendDiscordLog(true) 
-    Rayfield:Notify({ 
-        Title = "dark.cc", 
-        Content = "Ваш аккаунт заблокирован! Обратитесь к t.me/iceglock66", 
-        Duration = 10,
-        Image = 4483362458
+
+-- =================================================================================
+--                              ЗАГРУЗКА RAYFIELD
+-- =================================================================================
+
+local function load_rayfield()
+
+    local Window = Rayfield:CreateWindow({
+        Name = "dark.cc",
+        Icon = 0,
+        LoadingTitle = "Loading. . .",
+        LoadingSubtitle = "dark.cc",
+        ShowText = "dark.cc",
+        Theme = "Amethyst",
+        ToggleUIKeybind = "Q",
+        DisableRayfieldPrompts = true,
+        DisableBuildWarnings = false,
+
+        ConfigurationSaving = {
+            Enabled = true,
+            FolderName = "dark.cc", 
+            FileName = "darkCFG"
+        },
+
+        Discord = {
+            Enabled = false, 
+            Invite = "noinvitelink", 
+            RememberJoins = true 
+        },
+
+        KeySystem = true, 
+        KeySettings = {
+            Title = "dark.cc",
+            Subtitle = "Key System",
+            Note = "Wanna key? buy at t.me/darkcheatcc", 
+            FileName = "svdkey", 
+            SaveKey = true, 
+            GrabKeyFromSite = true, -- *** ВКЛЮЧЕНО: КЛЮЧИ БЕРУТСЯ С САЙТА ***
+            Key = {KEYS_RAW_URL},    -- *** ССЫЛКА НА RAW-ФАЙЛ С КЛЮЧАМИ ***
+            Callback = KeyCallback   -- *** ЛОГИКА ЛОГИРОВАНИЯ ***
+        }
     })
-    return
-else
-    SendDiscordLog(false) 
+
+    Rayfield:Notify({
+        Title = "dark.cc",
+        Content = "Loaded!",
+        Duration = 6.5,
+        Image = 4483362458,
+    })
+
+    -- ... Остальная часть вашего кода GUI и функций ...
+
+    local main = Window:CreateTab("Main", 4483362458)
+    local misc = Window:CreateTab("Misc", 4483362458)
+    local visuals = Window:CreateTab("Visuals", 4483362458)
+
+    local Button1 = main:CreateButton({
+        Name = "t.me/darkcheatcc",
+        Callback = function()
+        print("SUBSCRIBE")
+        end,
+    })
+
+    local Button2 = visuals:CreateButton({
+        Name = "Esp",
+        Callback = function()
+        local camera = game:GetService("Workspace").CurrentCamera
+        local CurrentCamera = workspace.CurrentCamera
+        local worldToViewportPoint = CurrentCamera.worldToViewportPoint
+
+        local HeadOff = Vector3.new(0, 0.5, 0)
+        local LegOff = Vector3.new(0, 3, 0)
+
+        local function createBoxEsp(v)
+             local Box = Drawing.new("Square")
+             Box.Visible = false
+             Box.Color = v.TeamColor.Color
+             Box.Thickness = 3
+             Box.Transparency = 1
+             Box.Filled = false
+
+             local HealthBar = Drawing.new("Line")
+             HealthBar.Visible = false
+             HealthBar.Color = Color3.new(0, 1, 0)
+             HealthBar.Thickness = 2
+
+             local NameTag = Drawing.new("Text")
+             NameTag.Visible = false
+             NameTag.Color = Color3.new(1, 1, 1)
+             NameTag.Size = 9
+             NameTag.Center = true
+             NameTag.Outline = true
+             NameTag.OutlineColor = Color3.new(0, 0, 0)
+
+             local DistanceTag = Drawing.new("Text")
+             DistanceTag.Visible = false
+             DistanceTag.Color = Color3.new(1, 1, 1)
+             DistanceTag.Size = 9
+             DistanceTag.Center = true
+             DistanceTag.Outline = true
+             DistanceTag.OutlineColor = Color3.new(0, 0, 0)
+
+             local Tracer = Drawing.new("Line")
+             Tracer.Visible = false
+             Tracer.Color = v.TeamColor.Color
+             Tracer.Thickness = 2
+
+             game:GetService("RunService").RenderStepped:Connect(function()
+                  if v.Character and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("HumanoidRootPart") and v ~= lplr and v.Character.Humanoid.Health > 0 then
+                       local Vector, onScreen = camera:worldToViewportPoint(v.Character.HumanoidRootPart.Position)
+
+                       local RootPart = v.Character.HumanoidRootPart
+                       local Head = v.Character.Head
+                       local RootPosition, RootVisibility = worldToViewportPoint(CurrentCamera, RootPart.Position)
+                       local HeadPosition = worldToViewportPoint(CurrentCamera, Head.Position + HeadOff)
+                       local LegPosition = worldToViewportPoint(CurrentCamera, RootPart.Position - LegOff)
+
+                       Box.Size = Vector2.new(1000 / RootPosition.Z, HeadPosition.Y - LegPosition.Y)
+                       Box.Position = Vector2.new(RootPosition.X - Box.Size.X / 2, RootPosition.Y - Box.Size.Y / 2)
+
+                       local health = v.Character.Humanoid.Health / v.Character.Humanoid.MaxHealth
+                       HealthBar.From = Vector2.new(Box.Position.X + Box.Size.X + 5, Box.Position.Y + Box.Size.Y * (1 - health))
+                       HealthBar.To = Vector2.new(Box.Position.X + Box.Size.X + 5, Box.Position.Y + Box.Size.Y)
+                       HealthBar.Color = Color3.new(1 - health, health, 0)
+
+                       NameTag.Position = Vector2.new(Box.Position.X + Box.Size.X / 2, Box.Position.Y - 20)
+                       NameTag.Text = v.Name
+                       NameTag.Visible = true
+
+                       DistanceTag.Position = Vector2.new(Box.Position.X + Box.Size.X / 2, Box.Position.Y + Box.Size.Y)
+                       DistanceTag.Text = tostring(math.floor((lplr.Character.HumanoidRootPart.Position - RootPart.Position).Magnitude)) .. "m"
+                       DistanceTag.Visible = true
+
+                       local lplrHead = lplr.Character:FindFirstChild("Head")
+                       if lplrHead then
+                            local lplrHeadViewport = camera:worldToViewportPoint(lplrHead.Position)
+
+                            Tracer.From = Vector2.new(lplrHeadViewport.X, lplrHeadViewport.Y)
+                            Tracer.To = Vector2.new(RootPosition.X, RootPosition.Y)
+                       end
+
+                       if onScreen then
+                            Box.Visible = true
+                            HealthBar.Visible = true
+                            NameTag.Visible = true
+                            DistanceTag.Visible = true
+                            Tracer.Visible = true
+                       else
+                            Box.Visible = false
+                            HealthBar.Visible = false
+                            NameTag.Visible = false
+                            DistanceTag.Visible = false
+                            Tracer.Visible = false
+                       end
+                  else
+                       Box.Visible = false
+                       HealthBar.Visible = false
+                       NameTag.Visible = false
+                       DistanceTag.Visible = false
+                       Tracer.Visible = false
+                  end
+             end)
+        end
+
+        for i, v in pairs(game.Players:GetChildren()) do
+             createBoxEsp(v)
+        end
+
+        game.Players.PlayerAdded:Connect(function(v)
+             createBoxEsp(v)
+             end)
+             end,
+    })
+
+    local Button3 = misc:CreateButton({
+        Name = "Legit AimBot",
+        Callback = function()
+        local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()
+    Aimbot.Load()
+        end,
+    })
 end
 
-local Window = Rayfield:CreateWindow({ 
-    Name = "dark.cc", 
-    LoadingTitle = "dark.cc", 
-    LoadingSubtitle = "Loading. . .", 
-    ConfigurationSaving = { 
-        Enabled = true, 
-        FolderName = "darkconfig", 
-        FileName = "config" 
-    }, 
-    KeySystem = true, 
-    KeySettings = { 
-        Title = "dark.cc", 
-        Subtitle = "Key System", 
-        Note = "Wanna key? buy private - t.me/iceglock66", 
-        FileName = "darkcc", 
-        SaveKey = true, 
-        GrabKeyFromSite = true, 
-        Key = {"https://raw.githubusercontent.com/Sqweex-lua/-SS-Waffen-BDSM--.corporation/refs/heads/main/IlIIlIlIlIlIlIIlIlIlIlIlIIlIlIlIl.asm"} 
-    } 
-}) 
+-- =================================================================================
+--                              ТОЧКА ВХОДА (ПРОВЕРКА БАНА)
+-- =================================================================================
 
-local MainTab = Window:CreateTab("Main", 4483362458)
-
----
-## Main Tab Elements
----
-
-MainTab:CreateInput({
-    Name = "Speedhack (WalkSpeed)",
-    Flag = "SpeedInput_Final",
-    CurrentValue = tostring(currentWalkSpeed),
-    Placeholder = "16 - 200",
-    NumberOnly = true, 
-    Callback = function(value)
-        local speed = tonumber(value)
-        
-        if speed and speed >= 16 and speed <= 200 then
-            currentWalkSpeed = speed
-        else
-            currentWalkSpeed = 16 
-        end
-        
-        local function applySpeed(char)
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = currentWalkSpeed
-            end
-        end
-
-        applySpeed(LocalPlayer.Character)
-        
-        LocalPlayer.CharacterAdded:Connect(applySpeed)
-    end,
-})
-
-MainTab:CreateToggle({
-    Name = "Wallhack (Noclip)",
-    CurrentValue = false,
-    Flag = "WallhackToggle",
-    Callback = function(value)
-        
-        local function toggleNoclip(char)
-            local rootPart = char:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                rootPart.CanCollide = not value
-            end
-        end
-
-        if LocalPlayer.Character then
-            toggleNoclip(LocalPlayer.Character)
-        end
-        
-        if value then
-            LocalPlayer.CharacterAdded:Connect(toggleNoclip)
-        end
-    end,
-})
-
----
-## Visuals Tab Elements
----
-
-local VisualsTab = Window:CreateTab("Visuals", 6835368962) 
-
-VisualsTab:CreateToggle({
-    Name = "Headless", 
-    CurrentValue = false,
-    Flag = "HeadlessToggle",
-    Callback = function(value)
-        local character = LocalPlayer.Character
-        if not character then return end
-        local head = character:FindFirstChild("Head")
-
-        if head then
-            head.Transparency = value and 1 or 0
-            head.CanCollide = not value 
-            
-            for _, child in ipairs(head:GetChildren()) do
-                if child:IsA("Decal") or child:IsA("Texture") or child:IsA("SpecialMesh") then
-                    child.Transparency = value and 1 or 0
-                end
-            end
-        end
-    end,
-})
-
-VisualsTab:CreateColorPicker({
-    Name = "Sky Color Changer",
-    Flag = "SkyColorPicker",
-    CurrentColor = Lighting.OutdoorAmbient,
-    Callback = function(color)
-        Lighting.OutdoorAmbient = color
-        Lighting.FogColor = color
-    end,
-})
-
-VisualsTab:CreateToggle({
-    Name = "ChinaHat", 
-    CurrentValue = false,
-    Flag = "PythonHatToggle",
-    Callback = function(value)
-        local character = LocalPlayer.Character
-        if not character then return end
-        local head = character:FindFirstChild("Head")
-        if not head then return end
-
-        if value then
-            if not hatExists then
-                local hat = Instance.new("Part")
-                hat.Name = "ClientPython"
-                hat.Anchored = false
-                hat.CanCollide = false
-                hat.Size = Vector3.new(4, 0.3, 4)
-                hat.Shape = Enum.PartType.Block
-                hat.Transparency = 0.4
-                hat.Material = Enum.Material.Neon
-                hat.Parent = head
-
-                local mesh = Instance.new("SpecialMesh", hat)
-                mesh.MeshType = Enum.MeshType.FileMesh
-                mesh.MeshId = "rbxassetid://1033714" 
-                mesh.Scale = Vector3.new(2, 1, 2)
-
-                hat.CFrame = head.CFrame * CFrame.new(0, 1, 0)
-                local weld = Instance.new("WeldConstraint", hat)
-                weld.Part0 = hat
-                weld.Part1 = head
-                
-                colorConnection = game:GetService("RunService").RenderStepped:Connect(function()
-                    hue = (hue + 1) % 360
-                    hat.Color = Color3.fromHSV(hue / 360, 1, 1)
-                end)
-
-                hatExists = true
-            end
-        else
-            if hatExists then
-                if colorConnection then
-                    colorConnection:Disconnect()
-                    colorConnection = nil
-                end
-
-                local existingHat = head:FindFirstChild("ClientPython")
-                if existingHat then
-                    existingHat:Destroy()
-                end
-
-                hatExists = false
-            end
-        end
-    end,
-})
-
-Rayfield:Notify({ 
-    Title = "dark.cc", 
-    Content = "Loaded! ", 
-    Duration = 6.5, 
-    Image = 4483362458, 
-    Actions = { 
-        Ignore = { 
-            Name = "OK", 
-            Callback = function() 
-                print("t.me/darkcheatcc") 
-            end 
-        }, 
-    }, 
-})
+-- Проверяем статус бана перед загрузкой Rayfield
+if check_ban_status() then
+    -- Если забанен, показываем уведомление и не загружаем GUI
+    Rayfield:Notify({
+        Title = "dark.cc",
+        Content = "❌ Ваш аккаунт заблокирован. Доступ запрещен.",
+        Duration = 15,
+        Image = 4483362458,
+    })
+else
+    -- Если не забанен, запускаем загрузку Rayfield, которая проверит ключ
+    load_rayfield()
+end
