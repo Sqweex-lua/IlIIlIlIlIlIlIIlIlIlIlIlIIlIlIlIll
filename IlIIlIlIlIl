@@ -187,15 +187,14 @@ local function load_rayfield()
     local Button2 = visuals:CreateButton({
         Name = "Esp",
         Callback = function()
-        -- Ваш код ESP
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universal-Aimbot-v3-56070"))()
         end,
     })
 
     local Button3 = misc:CreateButton({
         Name = "Legit AimBot",
         Callback = function()
-        local Aimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V3/main/src/Aimbot.lua"))()
-        Aimbot.Load()
+        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Universal-Aimbot-v3-56070"))()
         end,
     })
 end
