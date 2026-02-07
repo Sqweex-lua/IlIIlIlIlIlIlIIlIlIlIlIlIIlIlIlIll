@@ -6,7 +6,7 @@ from telethon import functions, types, errors
 
 # cfgg
 API_ID = 22715257
-API_HASH = '7982af310274ecf28b9e5e3475e7eaa3 '
+API_HASH = '7982af310274ecf28b9e5e3475e7eaa3'
 SESSIONS_DIR = 'sessions'
 DELAY = 2
 
